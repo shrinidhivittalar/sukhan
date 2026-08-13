@@ -57,7 +57,23 @@ app.all("/api/auth/*", toNodeHandler(auth));
 
 app.use(express.json({ limit: "64kb" }));
 
-app.use((_request, response) => {
+app.use((request, response) => {
+  // This server hosts only the auth API. A browser arriving anywhere else
+  // followed a redirect meant for the frontend (typically /login after email
+  // verification), so forward it rather than showing raw JSON.
+  const isBrowserNavigation = request.method === "GET" && request.accepts("html");
+  const pointsElsewhere = (() => {
+    try {
+      return new URL(env.appUrl).origin !== new URL(env.authUrl).origin;
+    } catch {
+      return false;
+    }
+  })();
+
+  if (isBrowserNavigation && pointsElsewhere) {
+    return response.redirect(302, new URL(request.originalUrl, env.appUrl).toString());
+  }
+
   response.status(404).json({ error: "Not found" });
 });
 

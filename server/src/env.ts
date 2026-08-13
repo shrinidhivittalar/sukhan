@@ -54,6 +54,35 @@ export const env = {
   },
 } as const;
 
+if (isProduction) {
+  const problems: string[] = [];
+
+  if (/\/\/(localhost|127\.0\.0\.1)/.test(env.appUrl)) {
+    problems.push(`APP_URL still points at localhost (${env.appUrl}).`);
+  }
+  if (/\/\/(localhost|127\.0\.0\.1)/.test(env.authUrl)) {
+    problems.push(`BETTER_AUTH_URL still points at localhost (${env.authUrl}).`);
+  }
+  try {
+    if (new URL(env.appUrl).origin === new URL(env.authUrl).origin) {
+      problems.push(
+        "APP_URL and BETTER_AUTH_URL are the same origin. APP_URL must be the " +
+          "frontend (the site with the /login page), not this auth server. " +
+          "Leaving them equal makes post-verification redirects land here and " +
+          "return 404.",
+      );
+    }
+  } catch {
+    problems.push("APP_URL or BETTER_AUTH_URL is not a valid absolute URL.");
+  }
+
+  if (problems.length > 0) {
+    throw new Error(
+      `Refusing to start with a broken configuration:\n  - ${problems.join("\n  - ")}`,
+    );
+  }
+}
+
 if (isProduction && !env.cookieDomain) {
   console.warn(
     "[auth] COOKIE_DOMAIN is not set. In production the frontend and this server " +
