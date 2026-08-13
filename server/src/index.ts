@@ -5,7 +5,7 @@ import rateLimit from "express-rate-limit";
 import helmet from "helmet";
 import { auth, pool } from "./auth.js";
 import { allowedOrigins, env } from "./env.js";
-import { verifySmtp } from "./mailer.js";
+import { verifyMailer } from "./mailer.js";
 
 const app = express();
 
@@ -97,7 +97,7 @@ const server = app.listen(env.port, () => {
   console.log(`[server] baseURL   ${env.authUrl}`);
   console.log(`[server] app       ${env.appUrl}`);
   console.log(`[server] origins   ${allowedOrigins.join(", ") || "(none)"}`);
-  void verifySmtp();
+  void verifyMailer();
 });
 
 for (const signal of ["SIGTERM", "SIGINT"] as const) {

@@ -1,20 +1,33 @@
 import nodemailer from "nodemailer";
-import { env } from "./env.js";
+import { env, mailTransport } from "./env.js";
 
-const transporter = nodemailer.createTransport({
-  host: env.smtp.host,
-  port: env.smtp.port,
-  // 465 is implicit TLS; 587 upgrades via STARTTLS.
-  secure: env.smtp.port === 465,
-  auth: { user: env.smtp.user, pass: env.smtp.pass },
-});
+const transporter =
+  mailTransport === "smtp"
+    ? nodemailer.createTransport({
+        host: env.smtp.host,
+        port: env.smtp.port,
+        // 465 is implicit TLS; 587 upgrades via STARTTLS.
+        secure: env.smtp.port === 465,
+        auth: { user: env.smtp.user, pass: env.smtp.pass },
+      })
+    : null;
 
-export async function verifySmtp(): Promise<void> {
+export async function verifyMailer(): Promise<void> {
+  if (mailTransport === "none") return;
+
+  if (mailTransport !== "smtp") {
+    console.log(`[mail] using the ${mailTransport} HTTPS API as ${env.mailFrom}`);
+    return;
+  }
+
   try {
-    await transporter.verify();
+    await transporter!.verify();
     console.log(`[mail] SMTP ready via ${env.smtp.host}:${env.smtp.port}`);
   } catch (error) {
-    console.error("[mail] SMTP connection failed:", (error as Error).message);
+    console.error(
+      `[mail] SMTP connection failed: ${(error as Error).message}. ` +
+        "Hosts such as Render block outbound SMTP; set RESEND_API_KEY or BREVO_API_KEY.",
+    );
   }
 }
 
@@ -56,14 +69,58 @@ function render({ heading, intro, buttonLabel, url, footnote }: TemplateOptions)
 </html>`;
 }
 
-async function send(to: string, subject: string, html: string, text: string) {
-  await transporter.sendMail({
-    from: `"Sukhan" <${env.smtp.from}>`,
-    to,
-    subject,
-    text,
-    html,
+async function sendViaResend(to: string, subject: string, html: string, text: string) {
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${env.resendApiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ from: `Sukhan <${env.mailFrom}>`, to: [to], subject, html, text }),
   });
+  if (!response.ok) {
+    throw new Error(`Resend rejected the message (${response.status}): ${await response.text()}`);
+  }
+}
+
+async function sendViaBrevo(to: string, subject: string, html: string, text: string) {
+  const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+    method: "POST",
+    headers: { "api-key": env.brevoApiKey, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      sender: { name: "Sukhan", email: env.mailFrom },
+      to: [{ email: to }],
+      subject,
+      htmlContent: html,
+      textContent: text,
+    }),
+  });
+  if (!response.ok) {
+    throw new Error(`Brevo rejected the message (${response.status}): ${await response.text()}`);
+  }
+}
+
+async function send(to: string, subject: string, html: string, text: string) {
+  switch (mailTransport) {
+    case "resend":
+      return sendViaResend(to, subject, html, text);
+    case "brevo":
+      return sendViaBrevo(to, subject, html, text);
+    case "smtp":
+      await transporter!.sendMail({
+        from: `"Sukhan" <${env.smtp.from}>`,
+        to,
+        subject,
+        text,
+        html,
+      });
+      return;
+    default:
+      throw new Error(
+        "No email provider is configured, so this message cannot be delivered. " +
+          "Set RESEND_API_KEY or BREVO_API_KEY.",
+      );
+  }
 }
 
 export async function sendVerificationEmail(to: string, url: string) {

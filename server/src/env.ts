@@ -45,14 +45,48 @@ export const env = {
   /** Extra browser origins allowed to call this server with credentials. */
   trustedOrigins: list("TRUSTED_ORIGINS"),
 
+  /**
+   * Render blocks outbound SMTP (ports 25/465/587), so production sends over
+   * an HTTPS email API instead. SMTP stays available for local development.
+   */
+  resendApiKey: optional("RESEND_API_KEY", ""),
+  brevoApiKey: optional("BREVO_API_KEY", ""),
+
+  mailFrom: optional("MAIL_FROM", process.env.SMTP_FROM ?? process.env.SMTP_USER ?? ""),
+
   smtp: {
-    host: required("SMTP_HOST"),
+    host: optional("SMTP_HOST", ""),
     port: Number(optional("SMTP_PORT", "587")),
-    user: required("SMTP_USER"),
-    pass: required("SMTP_PASS"),
+    user: optional("SMTP_USER", ""),
+    pass: optional("SMTP_PASS", ""),
     from: optional("SMTP_FROM", process.env.SMTP_USER ?? ""),
   },
 } as const;
+
+export type MailTransport = "resend" | "brevo" | "smtp" | "none";
+
+export const mailTransport: MailTransport = env.resendApiKey
+  ? "resend"
+  : env.brevoApiKey
+    ? "brevo"
+    : env.smtp.host && env.smtp.user
+      ? "smtp"
+      : "none";
+
+if (mailTransport === "none") {
+  console.warn(
+    "[mail] No email provider configured. Set RESEND_API_KEY or BREVO_API_KEY " +
+      "(required on Render, which blocks SMTP), or SMTP_* for local development.",
+  );
+}
+
+if (isProduction && mailTransport === "smtp") {
+  console.warn(
+    "[mail] Using SMTP in production. Render blocks outbound SMTP ports, so " +
+      "verification and password-reset emails will time out there. Set " +
+      "RESEND_API_KEY or BREVO_API_KEY instead.",
+  );
+}
 
 if (isProduction) {
   const problems: string[] = [];
