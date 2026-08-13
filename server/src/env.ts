@@ -101,21 +101,28 @@ const smtpConfigured = Boolean(env.smtp.host && env.smtp.user);
 const smtpUsable =
   smtpConfigured && (!isProduction || optional("ALLOW_SMTP", "").toLowerCase() === "true");
 
+/**
+ * Brevo issues two credentials and only the API key (xkeysib-) authenticates
+ * against the HTTP API. Accepting the SMTP key would switch verification on
+ * while delivery fails, creating accounts that can never sign in. Reject it
+ * outright so the deployment degrades to no-verification instead.
+ */
+const brevoKeyUsable = env.brevoApiKey.startsWith("xkeysib-");
+
 export const mailTransport: MailTransport = env.resendApiKey
   ? "resend"
-  : env.brevoApiKey
+  : brevoKeyUsable
     ? "brevo"
     : smtpUsable
       ? "smtp"
       : "none";
 
-// Brevo issues two different credentials. The SMTP key (xsmtpsib-) cannot
-// authenticate against the HTTP API and would fail with an opaque 401.
-if (env.brevoApiKey && !env.brevoApiKey.startsWith("xkeysib-")) {
+if (env.brevoApiKey && !brevoKeyUsable) {
   console.warn(
-    "[mail] BREVO_API_KEY does not look like an API key. Brevo's SMTP key " +
-      "(xsmtpsib-...) only works over SMTP, which this host blocks. Create an " +
-      "API key instead under SMTP & API > API Keys; it begins with xkeysib-.",
+    "[mail] Ignoring BREVO_API_KEY: this is Brevo's SMTP key (xsmtpsib-...), " +
+      "which only works over SMTP and cannot authenticate against the HTTP " +
+      "API. Create an API key under SMTP & API > API Keys; it begins with " +
+      "xkeysib-. Email features stay disabled until then.",
   );
 }
 
