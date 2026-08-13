@@ -2,11 +2,15 @@
 
 import { createAuthClient } from "better-auth/react";
 
-const baseURL = process.env.NEXT_PUBLIC_AUTH_URL;
+const baseURL = process.env.NEXT_PUBLIC_AUTH_URL ?? "";
 
-if (!baseURL) {
-  throw new Error(
-    "NEXT_PUBLIC_AUTH_URL is not set. Point it at the Render auth server, e.g. http://localhost:3001",
+// This module is imported by prerendered pages, so a missing value must not
+// throw at import time or it fails the production build instead of surfacing
+// as a configuration problem. Complain loudly in the browser instead.
+if (!baseURL && typeof window !== "undefined") {
+  console.error(
+    "NEXT_PUBLIC_AUTH_URL is not set. Authentication requests will fail. " +
+      "Point it at the auth server, e.g. https://auth.yourdomain.com",
   );
 }
 
