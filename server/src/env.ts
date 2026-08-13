@@ -109,6 +109,16 @@ export const mailTransport: MailTransport = env.resendApiKey
       ? "smtp"
       : "none";
 
+// Brevo issues two different credentials. The SMTP key (xsmtpsib-) cannot
+// authenticate against the HTTP API and would fail with an opaque 401.
+if (env.brevoApiKey && !env.brevoApiKey.startsWith("xkeysib-")) {
+  console.warn(
+    "[mail] BREVO_API_KEY does not look like an API key. Brevo's SMTP key " +
+      "(xsmtpsib-...) only works over SMTP, which this host blocks. Create an " +
+      "API key instead under SMTP & API > API Keys; it begins with xkeysib-.",
+  );
+}
+
 if (smtpConfigured && !smtpUsable) {
   console.warn(
     "[mail] Ignoring SMTP_* in production because managed hosts block outbound " +
