@@ -53,6 +53,24 @@ export const env = {
   proxied: optional("AUTH_PROXIED", "").toLowerCase() === "true",
 
   /**
+   * CIDR ranges of proxies sitting in front of this server. Required for rate
+   * limiting: X-Forwarded-For arrives as a chain ("client, edge"), and
+   * better-auth refuses to trust a multi-hop header unless it knows which
+   * hops to skip. Defaults to private ranges, which covers Render, Fly and
+   * most container platforms whose edge is the only route to the container.
+   */
+  trustedProxies: list("TRUSTED_PROXIES").length > 0
+    ? list("TRUSTED_PROXIES")
+    : [
+        "10.0.0.0/8",
+        "172.16.0.0/12",
+        "192.168.0.0/16",
+        "127.0.0.0/8",
+        "::1/128",
+        "fc00::/7",
+      ],
+
+  /**
    * Render blocks outbound SMTP (ports 25/465/587), so production sends over
    * an HTTPS email API instead. SMTP stays available for local development.
    */

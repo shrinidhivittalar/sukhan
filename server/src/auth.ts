@@ -133,6 +133,9 @@ export const auth = betterAuth({
     // apart and degrades to one shared bucket for everyone.
     ipAddress: {
       ipAddressHeaders: ["x-forwarded-for", "x-real-ip"],
+      // Without this, a multi-hop X-Forwarded-For is discarded entirely and
+      // every caller collapses into one shared rate-limit bucket.
+      trustedProxies: env.trustedProxies,
     },
     // Three cookie shapes, depending on how the browser reaches this server:
     //
