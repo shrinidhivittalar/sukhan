@@ -128,6 +128,12 @@ export const auth = betterAuth({
   },
 
   advanced: {
+    // Render terminates TLS at its edge and forwards the caller in
+    // X-Forwarded-For. Without this the rate limiter cannot tell clients
+    // apart and degrades to one shared bucket for everyone.
+    ipAddress: {
+      ipAddressHeaders: ["x-forwarded-for", "x-real-ip"],
+    },
     // The frontend (Vercel) and this server (Render) are different hosts, so
     // the session cookie has to be readable across the shared parent domain.
     // Locally both sides are `localhost` (cookies ignore ports), so the
