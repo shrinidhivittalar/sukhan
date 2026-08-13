@@ -1,6 +1,6 @@
 import { betterAuth } from "better-auth";
 import { Pool } from "pg";
-import { allowedOrigins, env } from "./env.js";
+import { allowedOrigins, env, requireEmailVerification } from "./env.js";
 import { sendResetPasswordEmail, sendVerificationEmail } from "./mailer.js";
 
 export const pool = new Pool({
@@ -91,7 +91,10 @@ export const auth = betterAuth({
 
   emailAndPassword: {
     enabled: true,
-    requireEmailVerification: true,
+    requireEmailVerification: requireEmailVerification,
+    // With verification off there is no inbox round trip, so put the new
+    // account straight into a session rather than bouncing to a login form.
+    autoSignIn: !requireEmailVerification,
     minPasswordLength: 8,
     maxPasswordLength: 128,
     resetPasswordTokenExpiresIn: 60 * 60, // 1 hour
@@ -101,7 +104,7 @@ export const auth = betterAuth({
   },
 
   emailVerification: {
-    sendOnSignUp: true,
+    sendOnSignUp: requireEmailVerification,
     autoSignInAfterVerification: true,
     expiresIn: 60 * 60, // 1 hour
     sendVerificationEmail: async ({ user, url }) => {

@@ -4,7 +4,7 @@ import express from "express";
 import rateLimit from "express-rate-limit";
 import helmet from "helmet";
 import { auth, pool } from "./auth.js";
-import { allowedOrigins, env } from "./env.js";
+import { allowedOrigins, emailEnabled, env, requireEmailVerification } from "./env.js";
 import { verifyMailer } from "./mailer.js";
 
 const app = express();
@@ -41,6 +41,12 @@ app.use(
     legacyHeaders: false,
   }),
 );
+
+// Lets the frontend hide flows this deployment cannot support (password reset
+// needs an email provider). Adding an API key flips these without a rebuild.
+app.get("/config", (_request, response) => {
+  response.json({ emailEnabled, requireEmailVerification });
+});
 
 app.get("/health", async (_request, response) => {
   try {

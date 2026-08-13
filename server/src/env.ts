@@ -98,10 +98,31 @@ export const mailTransport: MailTransport = env.resendApiKey
       ? "smtp"
       : "none";
 
-if (mailTransport === "none") {
+/**
+ * Verification and password reset both depend on delivering mail. With no
+ * provider configured they cannot work, so verification is switched off and
+ * new accounts are signed in directly. Adding an API key turns both back on
+ * with no code change. REQUIRE_EMAIL_VERIFICATION can force either way.
+ */
+const verificationOverride = optional("REQUIRE_EMAIL_VERIFICATION", "").toLowerCase();
+export const emailEnabled = mailTransport !== "none";
+export const requireEmailVerification =
+  verificationOverride === "true" ? true
+  : verificationOverride === "false" ? false
+  : emailEnabled;
+
+if (!emailEnabled) {
   console.warn(
-    "[mail] No email provider configured. Set RESEND_API_KEY or BREVO_API_KEY " +
-      "(required on Render, which blocks SMTP), or SMTP_* for local development.",
+    "[mail] No email provider configured. Email verification and password " +
+      "reset are DISABLED; new accounts are signed in immediately. Set " +
+      "BREVO_API_KEY or RESEND_API_KEY to enable them (Render blocks SMTP).",
+  );
+}
+
+if (requireEmailVerification && !emailEnabled) {
+  throw new Error(
+    "REQUIRE_EMAIL_VERIFICATION=true but no email provider is configured, so " +
+      "nobody could ever verify and sign in. Set BREVO_API_KEY or RESEND_API_KEY.",
   );
 }
 

@@ -2,11 +2,13 @@
 
 import { ArrowRight, MailCheck } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { authErrorMessage, signUp } from "../lib/auth-client";
 import { MIN_PASSWORD_LENGTH, PasswordField, passwordProblem } from "../password-field";
 
 export function SignupForm() {
+  const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -31,13 +33,21 @@ export function SignupForm() {
     if (password !== confirm) return setError("The two passwords do not match.");
 
     setPending(true);
-    const { error: signUpError } = await signUp.email({
+    const { data, error: signUpError } = await signUp.email({
       name: cleanName,
       email: cleanEmail,
       password,
       callbackURL: "/login?verified=1",
     });
     setPending(false);
+
+    if (!signUpError && data?.token) {
+      // Verification is disabled on this deployment, so the account is already
+      // in a session. Skip the "check your inbox" screen entirely.
+      router.push("/");
+      router.refresh();
+      return;
+    }
 
     if (signUpError) {
       setError(

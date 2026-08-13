@@ -10,9 +10,11 @@ import { PasswordField } from "../password-field";
 export function LoginForm({
   justVerified,
   justReset,
+  emailEnabled,
 }: {
   justVerified: boolean;
   justReset: boolean;
+  emailEnabled: boolean;
 }) {
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -131,7 +133,9 @@ export function LoginForm({
       </form>
 
       <div className="auth-links">
-        <Link href="/forgot-password">Forgot your password?</Link>
+        {/* Reset needs an email provider; hide it rather than send users into
+            a flow whose message can never arrive. */}
+        {emailEnabled && <Link href="/forgot-password">Forgot your password?</Link>}
         <span>
           New here? <Link href="/signup">Create an account</Link>
         </span>

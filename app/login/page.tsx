@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { AuthShell } from "../auth-shell";
+import { getAuthConfig } from "../lib/config";
 import { getServerSession } from "../lib/session";
 import { LoginForm } from "./login-form";
 
@@ -11,7 +12,7 @@ export default async function LoginPage({
   searchParams: Promise<{ verified?: string; reset?: string }>;
 }) {
   if (await getServerSession()) redirect("/");
-  const params = await searchParams;
+  const [params, config] = await Promise.all([searchParams, getAuthConfig()]);
 
   return (
     <AuthShell
@@ -22,6 +23,7 @@ export default async function LoginPage({
       <LoginForm
         justVerified={params.verified === "1"}
         justReset={params.reset === "1"}
+        emailEnabled={config.emailEnabled}
       />
     </AuthShell>
   );
