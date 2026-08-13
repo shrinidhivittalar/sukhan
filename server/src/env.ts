@@ -46,6 +46,13 @@ export const env = {
   trustedOrigins: list("TRUSTED_ORIGINS"),
 
   /**
+   * True when the frontend proxies /api/auth/* through to this server, so the
+   * browser only ever sees the app's own origin. That makes the session cookie
+   * same-site and removes the need for a shared parent domain.
+   */
+  proxied: optional("AUTH_PROXIED", "").toLowerCase() === "true",
+
+  /**
    * Render blocks outbound SMTP (ports 25/465/587), so production sends over
    * an HTTPS email API instead. SMTP stays available for local development.
    */
@@ -98,12 +105,14 @@ if (isProduction) {
     problems.push(`BETTER_AUTH_URL still points at localhost (${env.authUrl}).`);
   }
   try {
-    if (new URL(env.appUrl).origin === new URL(env.authUrl).origin) {
+    // When proxied the two are *expected* to match: the browser reaches auth
+    // through the app's own origin.
+    if (!env.proxied && new URL(env.appUrl).origin === new URL(env.authUrl).origin) {
       problems.push(
         "APP_URL and BETTER_AUTH_URL are the same origin. APP_URL must be the " +
           "frontend (the site with the /login page), not this auth server. " +
           "Leaving them equal makes post-verification redirects land here and " +
-          "return 404.",
+          "return 404. (If the frontend proxies /api/auth/*, set AUTH_PROXIED=true.)",
       );
     }
   } catch {

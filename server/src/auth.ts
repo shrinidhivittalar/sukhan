@@ -134,16 +134,23 @@ export const auth = betterAuth({
     ipAddress: {
       ipAddressHeaders: ["x-forwarded-for", "x-real-ip"],
     },
-    // The frontend (Vercel) and this server (Render) are different hosts, so
-    // the session cookie has to be readable across the shared parent domain.
-    // Locally both sides are `localhost` (cookies ignore ports), so the
-    // cross-subdomain machinery is only switched on in production.
-    crossSubDomainCookies: env.isProduction && env.cookieDomain
-      ? { enabled: true, domain: env.cookieDomain }
-      : { enabled: false },
-    defaultCookieAttributes: env.isProduction
-      ? { sameSite: "none", secure: true, httpOnly: true, partitioned: true }
-      : { sameSite: "lax", secure: false, httpOnly: true },
+    // Three cookie shapes, depending on how the browser reaches this server:
+    //
+    // 1. Proxied  - requests arrive via the app's own origin, so the cookie is
+    //               plain same-site. No third-party cookie rules apply, which
+    //               is why this survives Safari and Brave without a domain.
+    // 2. Cross-site - frontend and auth sit on sibling subdomains of a shared
+    //               parent, requiring SameSite=None and an explicit domain.
+    // 3. Local    - both sides are localhost (cookies ignore ports).
+    crossSubDomainCookies:
+      env.isProduction && !env.proxied && env.cookieDomain
+        ? { enabled: true, domain: env.cookieDomain }
+        : { enabled: false },
+    defaultCookieAttributes: !env.isProduction
+      ? { sameSite: "lax", secure: false, httpOnly: true }
+      : env.proxied
+        ? { sameSite: "lax", secure: true, httpOnly: true }
+        : { sameSite: "none", secure: true, httpOnly: true, partitioned: true },
     useSecureCookies: env.isProduction,
     cookiePrefix: "sukhan",
   },

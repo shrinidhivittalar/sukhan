@@ -2,23 +2,19 @@
 
 import { createAuthClient } from "better-auth/react";
 
-const baseURL = process.env.NEXT_PUBLIC_AUTH_URL ?? "";
-
-// This module is imported by prerendered pages, so a missing value must not
-// throw at import time or it fails the production build instead of surfacing
-// as a configuration problem. Complain loudly in the browser instead.
-if (!baseURL && typeof window !== "undefined") {
-  console.error(
-    "NEXT_PUBLIC_AUTH_URL is not set. Authentication requests will fail. " +
-      "Point it at the auth server, e.g. https://auth.yourdomain.com",
-  );
-}
+/**
+ * Left unset by default, so requests go to this app's own origin and are
+ * rewritten to the auth server by `next.config.ts`. That keeps the session
+ * cookie first-party. Set NEXT_PUBLIC_AUTH_URL only when calling the auth
+ * server directly on a shared parent domain.
+ */
+const baseURL = process.env.NEXT_PUBLIC_AUTH_URL?.trim() || undefined;
 
 export const authClient = createAuthClient({
   baseURL,
   fetchOptions: {
-    // The auth server is a different origin, so the session cookie only rides
-    // along when credentials are explicitly included.
+    // Required either way: same-origin through the proxy, and cross-origin
+    // when talking to the auth host directly.
     credentials: "include",
   },
 });

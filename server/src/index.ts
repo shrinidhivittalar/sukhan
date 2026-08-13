@@ -62,15 +62,17 @@ app.use((request, response) => {
   // followed a redirect meant for the frontend (typically /login after email
   // verification), so forward it rather than showing raw JSON.
   const isBrowserNavigation = request.method === "GET" && request.accepts("html");
-  const pointsElsewhere = (() => {
+  // Guard against redirecting to ourselves: the target must be a real frontend
+  // origin, never the host this request just arrived on.
+  const targetsFrontend = (() => {
     try {
-      return new URL(env.appUrl).origin !== new URL(env.authUrl).origin;
+      return new URL(env.appUrl).host !== request.get("host");
     } catch {
       return false;
     }
   })();
 
-  if (isBrowserNavigation && pointsElsewhere) {
+  if (isBrowserNavigation && targetsFrontend) {
     return response.redirect(302, new URL(request.originalUrl, env.appUrl).toString());
   }
 
