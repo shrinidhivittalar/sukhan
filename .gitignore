@@ -52,3 +52,7 @@ next-env.d.ts
 
 # next
 /.next/
+
+# keep the templates, never the real files
+!.env.example
+!server/.env.example
