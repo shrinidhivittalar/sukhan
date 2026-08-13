@@ -90,13 +90,32 @@ export const env = {
 
 export type MailTransport = "resend" | "brevo" | "smtp" | "none";
 
+/**
+ * Managed hosts (Render, Fly, Vercel) block outbound SMTP, so leftover SMTP_*
+ * variables must not be mistaken for working email. Treating them as usable
+ * keeps verification switched on and locks every new account out behind a
+ * message that can never be delivered. Opt back in with ALLOW_SMTP=true if
+ * the host genuinely permits it.
+ */
+const smtpConfigured = Boolean(env.smtp.host && env.smtp.user);
+const smtpUsable =
+  smtpConfigured && (!isProduction || optional("ALLOW_SMTP", "").toLowerCase() === "true");
+
 export const mailTransport: MailTransport = env.resendApiKey
   ? "resend"
   : env.brevoApiKey
     ? "brevo"
-    : env.smtp.host && env.smtp.user
+    : smtpUsable
       ? "smtp"
       : "none";
+
+if (smtpConfigured && !smtpUsable) {
+  console.warn(
+    "[mail] Ignoring SMTP_* in production because managed hosts block outbound " +
+      "SMTP. Email features stay disabled. Set BREVO_API_KEY or RESEND_API_KEY " +
+      "to enable them, or ALLOW_SMTP=true if this host really does allow SMTP.",
+  );
+}
 
 /**
  * Verification and password reset both depend on delivering mail. With no
