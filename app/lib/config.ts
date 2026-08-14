@@ -10,11 +10,16 @@ const authUrl = process.env.AUTH_URL ?? process.env.NEXT_PUBLIC_AUTH_URL;
 
 /**
  * Asks the auth server which flows this deployment supports, so the UI does not
- * offer a password reset that can never arrive. Assumes email works if the
- * server cannot be reached, which keeps the normal deployment unchanged.
+ * offer a password reset that can never arrive.
+ *
+ * Falls back to email being OFF. A free-tier auth server sleeps and can take
+ * longer than the timeout to wake, and assuming email worked in that window put
+ * a reset link and a "confirm your email" screen in front of users on a
+ * deployment that could deliver neither. Hiding a flow that does work is a far
+ * cheaper mistake than offering one that cannot.
  */
 export async function getAuthConfig(): Promise<AuthConfig> {
-  const fallback: AuthConfig = { emailEnabled: true, requireEmailVerification: true };
+  const fallback: AuthConfig = { emailEnabled: false, requireEmailVerification: false };
   if (!authUrl) return fallback;
 
   try {

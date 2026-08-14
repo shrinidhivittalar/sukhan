@@ -44,8 +44,14 @@ export function LoginForm({
 
     if (signInError) {
       if (signInError.status === 403) {
-        setUnverified(true);
-        setError("Confirm your email before signing in.");
+        // Offering to resend without a provider would promise a mail that never
+        // sends; without one there is nothing the user can do but ask an admin.
+        setUnverified(emailEnabled);
+        setError(
+          emailEnabled
+            ? "Confirm your email before signing in."
+            : "This account is not activated. Please contact support.",
+        );
         return;
       }
       // Deliberately generic: never reveal whether the address exists.
