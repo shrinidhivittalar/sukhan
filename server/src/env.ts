@@ -201,11 +201,45 @@ if (isProduction) {
   }
 }
 
-if (isProduction && !env.cookieDomain) {
+/**
+ * Shared hosting domains are on the Public Suffix List, so a browser refuses a
+ * cookie scoped to them: every customer of the platform would otherwise be able
+ * to set cookies for every other. The refusal is silent, which presents as a
+ * login that appears to succeed and then bounces straight back to the sign-in
+ * page. Nothing works with such a value, so refuse to start rather than serve a
+ * deployment where nobody can stay signed in.
+ */
+const PUBLIC_SUFFIXES = [
+  "vercel.app",
+  "onrender.com",
+  "netlify.app",
+  "herokuapp.com",
+  "pages.dev",
+  "fly.dev",
+  "railway.app",
+  "github.io",
+];
+
+if (env.cookieDomain) {
+  const bare = env.cookieDomain.replace(/^\./, "").toLowerCase();
+  const suffix = PUBLIC_SUFFIXES.find((entry) => bare === entry);
+  if (suffix) {
+    throw new Error(
+      `COOKIE_DOMAIN is set to "${env.cookieDomain}", but ${suffix} is a shared ` +
+        "platform domain that browsers will not accept a cookie for, so no one " +
+        "could stay signed in. Remove COOKIE_DOMAIN and set AUTH_PROXIED=true so " +
+        "the frontend proxies /api/auth/* and the cookie stays first-party. " +
+        "COOKIE_DOMAIN is only for a custom domain you own, e.g. .example.com.",
+    );
+  }
+}
+
+if (isProduction && !env.cookieDomain && !env.proxied) {
   console.warn(
-    "[auth] COOKIE_DOMAIN is not set. In production the frontend and this server " +
-      "must share a parent domain (e.g. sukhan.example.com + auth.example.com with " +
-      "COOKIE_DOMAIN=.example.com), otherwise the browser will discard the session cookie.",
+    "[auth] COOKIE_DOMAIN is not set and AUTH_PROXIED is not enabled, so the " +
+      "browser will discard the session cookie and logins will not persist. " +
+      "Either set AUTH_PROXIED=true (correct on Vercel + Render), or, on a custom " +
+      "domain you own, set COOKIE_DOMAIN=.yourdomain.com.",
   );
 }
 

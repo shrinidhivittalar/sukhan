@@ -105,6 +105,25 @@ const server = app.listen(env.port, () => {
   console.log(`[server] baseURL   ${env.authUrl}`);
   console.log(`[server] app       ${env.appUrl}`);
   console.log(`[server] origins   ${allowedOrigins.join(", ") || "(none)"}`);
+  // Which of the three cookie shapes is in force decides whether a login can
+  // persist at all, and getting it wrong looks like a silent bounce back to the
+  // sign-in page rather than an error. State it plainly at boot.
+  console.log(
+    `[server] cookie    ${
+      !env.isProduction
+        ? "same-site on localhost (development)"
+        : env.proxied
+          ? "first-party via the app's proxy (AUTH_PROXIED=true)"
+          : env.cookieDomain
+            ? `cross-site, scoped to ${env.cookieDomain}`
+            : "cross-site with no COOKIE_DOMAIN — logins will NOT persist"
+    }`,
+  );
+  console.log(
+    `[server] email     ${emailEnabled ? "enabled" : "disabled"}, verification ${
+      requireEmailVerification ? "required" : "off"
+    }`,
+  );
   void verifyMailer();
 });
 
