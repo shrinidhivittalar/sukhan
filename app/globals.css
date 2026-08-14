@@ -1073,6 +1073,33 @@ body.reader-open { overflow: hidden; }
 .password-toggle:hover { color: var(--teal-dark); background: var(--surface-2); }
 .password-toggle[aria-pressed="true"] { color: var(--teal-dark); }
 
+.password-strength { display: block; margin-top: 8px; font-weight: 400; }
+
+.password-strength-bars { display: flex; gap: 4px; }
+.password-strength-bars > span {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  background: #e0e3dd;
+  transition: background-color 160ms ease;
+}
+
+/* One hue per rating, so the colour and the word never disagree. */
+.password-strength[data-score="0"] { --strength: var(--crimson); }
+.password-strength[data-score="1"] { --strength: var(--gold); }
+.password-strength[data-score="2"] { --strength: var(--teal); }
+.password-strength[data-score="3"] { --strength: var(--teal-dark); }
+.password-strength-bars > span.is-filled { background: var(--strength); }
+
+.password-strength-text {
+  display: block;
+  margin-top: 5px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #7b8582;
+}
+.password-strength-text strong { color: var(--strength); font-weight: 700; }
+
 .form-success {
   margin: 0 0 20px;
   padding: 12px 14px;

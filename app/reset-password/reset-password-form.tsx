@@ -5,7 +5,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { authErrorMessage, resetPassword } from "../lib/auth-client";
-import { MIN_PASSWORD_LENGTH, PasswordField, passwordProblem } from "../password-field";
+import {
+  MAX_PASSWORD_LENGTH,
+  MIN_PASSWORD_LENGTH,
+  PasswordField,
+  passwordProblem,
+} from "../password-field";
 
 export function ResetPasswordForm({
   token,
@@ -71,7 +76,8 @@ export function ResetPasswordForm({
           autoComplete="new-password"
           placeholder="At least 8 characters"
           disabled={pending}
-          hint={`Minimum ${MIN_PASSWORD_LENGTH} characters.`}
+          showStrength
+          hint={`Between ${MIN_PASSWORD_LENGTH} and ${MAX_PASSWORD_LENGTH} characters.`}
         />
 
         <PasswordField
